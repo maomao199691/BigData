@@ -1,8 +1,5 @@
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -36,7 +33,18 @@ public class HBase_LL {
 
         //testScanData("dev","user","101","102");
         //testGetData("dev","order","1001");
-        testCreateTable("space","test","f1");
+        //testCreateNameSpace("space");
+
+
+        //testScanData("space","test","001","003");
+        //testDeleteData("space","test","002","f2","order");
+        //testCreateTable("space","test","f1");
+
+        testPutData("space","test","001","f2","orderID","1001");
+        testPutData("space","test","002","f2","orderID","1002");
+        testScanData("space","test","001","003");
+
+        // 关闭连接对象
         connection.close();
 
     }
@@ -107,6 +115,39 @@ public class HBase_LL {
         System.out.println("-----------------------");
     }
 
+    /** DML 删除
+     *  shell:
+     *      delete: delete 'namespace:table','rk','f1','f2' => Delete
+     *      deleteall:
+     *              deleteall 'namespace:table','rk','cf','cl' => DeleteColumn
+     *              deleteall 'namespace:table','rk','cf' => DeleteFamily
+     */
+    public static void testDeleteData(String namespaceName,String tableName,String rk,String cf,String cl) throws IOException {
+        // 获取表对象
+        TableName tableName1 = TableName.valueOf(namespaceName, tableName);
+        Table table = connection.getTable(tableName1);
+
+        // 删除一个字段一个版本
+        //Delete delete = new Delete(Bytes.toBytes(rk));
+        //delete.addColumn(Bytes.toBytes(cf),Bytes.toBytes(cl));
+        //table.delete(delete);
+
+        // 删除一个字段所有版本
+        //Delete delete = new Delete(Bytes.toBytes(rk));
+        //delete.addColumns(Bytes.toBytes(cf),Bytes.toBytes(cl));
+        //table.delete(delete);
+
+        // 删除一个列族
+        Delete delete = new Delete(Bytes.toBytes(rk));
+        // 指定要删除的列族
+        delete.addFamily(Bytes.toBytes(cf));
+        table.delete(delete);
+
+        // 关闭表对象资源
+        table.close();
+    }
+
+
     /**
      * DDL 表操作
      * shell :
@@ -147,6 +188,41 @@ public class HBase_LL {
 
         System.out.println(namespaceName + " : " + tableName + "创建成功");
         admin.close();
+    }
+
+
+    /**
+     * DDL 增 改
+     * shell: put 'namespace:table','rk','cf:cl','value'
+     */
+    public static void testPutData(String namespaceName,String tableName,String rk,String cf,String cl,String value) throws IOException {
+
+        // 获取表对象
+        TableName tableName1 = TableName.valueOf(namespaceName, tableName);
+        Table table = connection.getTable(tableName1);
+
+        Put put = new Put(Bytes.toBytes(rk));
+        put.addColumn(Bytes.toBytes(cf),Bytes.toBytes(cl),Bytes.toBytes(value));
+        table.put(put);
+
+        // 关闭表连接
+        table.close();
+    }
+
+
+    /** 创建 namespace */
+    public static void testCreateNameSpace(String nameSpace) throws IOException {
+        // 获取管理对象
+        Admin admin = connection.getAdmin();
+
+        // 创建命名空间描述符
+        NamespaceDescriptor build = NamespaceDescriptor.create(nameSpace).build();
+        admin.createNamespace(build);
+        // 列出所有命名空间
+        NamespaceDescriptor[] ns = admin.listNamespaceDescriptors();
+        for (NamespaceDescriptor n : ns) {
+            System.out.println(n.getName());
+        }
     }
 
 }
